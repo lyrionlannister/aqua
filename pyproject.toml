@@ -1,0 +1,24 @@
+[project]
+name = "aqua"
+version = "0.1.0"
+description = "Framework web Python con inyección de dependencias automática, parámetros URL tipados y organización modular"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.14.0",
+    "sqlalchemy[asyncio]>=2.1.4",
+    "starlette>=0.48.0",
+    "uvicorn[standard]>=0.37.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
