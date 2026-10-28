@@ -1,0 +1,45 @@
+name: Seguridad
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  codigo-inyectado:
+    name: Detectar código inyectado
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Revisar archivos versionados
+        run: |
+          bad=0
+          while IFS= read -r -d '' f; do
+            [ -f "$f" ] || continue
+            case "$f" in
+              *.woff|*.woff2)
+                magic=$(head -c4 "$f")
+                if [ "$magic" != "wOFF" ] && [ "$magic" != "wOF2" ]; then
+                  echo "::error file=$f::no es una fuente real"; bad=1
+                fi
+                continue ;;
+              *.min.js) continue ;;
+            esac
+            # Los iconos SVG en .tsx tienen líneas largas legítimas; la inyección va en archivos de configuración.
+            case "$f" in
+              *.config.*|*eslintrc*|.vscode/*)
+                if ! awk 'length > 2000 { exit 1 }' "$f"; then
+                  echo "::error file=$f::línea de más de 2000 caracteres"; bad=1
+                fi ;;
+            esac
+            if grep -qE 'global\.i *=|drpc\.org|publicnode\.com|blastapi\.io|1rpc\.io' "$f"; then
+              echo "::error file=$f::contiene un marcador de malware conocido"; bad=1
+            fi
+          done < <(git ls-files -z -- '*.js' '*.cjs' '*.mjs' '*.ts' '*.tsx' '*.jsx' '*.woff' '*.woff2' '.vscode/*')
+          if [ -f .vscode/tasks.json ] && grep -q folderOpen .vscode/tasks.json; then
+            echo "::error file=.vscode/tasks.json::tarea que se ejecuta al abrir la carpeta"; bad=1
+          fi
+          exit $bad
